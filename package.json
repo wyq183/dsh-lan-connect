@@ -1,0 +1,25 @@
+{
+  "name": "dsh-lan-connect",
+  "version": "0.2.0",
+  "description": "DSH 局域网连接管理（桌面端适配版）：访问门禁 + 短时配对二维码 + 在线设备 + 门禁启停。本体永远只绑回环，局域网只走门禁口。LAN connection manager for DeepSeek Harness Desktop.",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "files": [
+    "lib",
+    "ui",
+    "README.md"
+  ],
+  "license": "MIT"
+}

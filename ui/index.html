@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>局域网连接 · dsh</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #151b23;
+    --panel-2: #1b222c;
+    --border: #2a3242;
+    --text: #e6edf3;
+    --muted: #8b98a9;
+    --accent: #4da3ff;
+    --accent-dim: rgba(77, 163, 255, .12);
+    --ok: #3fb950;
+    --warn: #d29922;
+    --danger: #f85149;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 20px 64px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: .2px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .card > h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--muted);
+    margin: 0 0 14px;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+  }
+  .badge.on { background: rgba(63,185,80,.14); color: var(--ok); }
+  .badge.off { background: rgba(210,153,34,.14); color: var(--warn); }
+  .badge.gray { background: rgba(139,152,169,.14); color: var(--muted); }
+  .badge.live { background: var(--accent-dim); color: var(--accent); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .entry {
+    display: flex; gap: 18px; align-items: flex-start;
+    padding: 14px; border-radius: 10px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .entry:last-child { margin-bottom: 0; }
+  .entry .qr {
+    flex: 0 0 auto; width: 132px; height: 132px;
+    background: #fff; border-radius: 8px; padding: 6px; position: relative;
+  }
+  .entry .qr img { width: 100%; height: 100%; display: block; }
+  .entry .qr.empty {
+    background: var(--panel); border: 1px dashed var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 11px; text-align: center; padding: 10px;
+  }
+  .entry .info { flex: 1 1 auto; min-width: 0; }
+  .entry .name { font-weight: 600; margin-bottom: 2px; }
+  .entry .name .rec {
+    font-size: 11px; font-weight: 600; color: var(--accent);
+    background: var(--accent-dim); padding: 1px 7px; border-radius: 999px; margin-left: 8px;
+  }
+  .entry .meta { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+  .url {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12px; word-break: break-all;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
+    color: #a8d4ff; max-height: 84px; overflow: auto;
+  }
+  button {
+    font: inherit; font-size: 12.5px; font-weight: 600;
+    color: var(--text); background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 13px; cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  button:hover { background: #232c38; border-color: #3a4557; }
+  button.primary { background: var(--accent-dim); border-color: rgba(77,163,255,.4); color: #a8d4ff; }
+  button.primary:hover { background: rgba(77,163,255,.2); }
+  button.danger { color: #ffb4ae; border-color: rgba(248,81,73,.35); background: rgba(248,81,73,.1); }
+  button.danger:hover { background: rgba(248,81,73,.18); }
+  button:disabled { opacity: .5; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; font-weight: 600; font-size: 11.5px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .05em;
+    padding: 0 10px 8px 0; border-bottom: 1px solid var(--border);
+  }
+  td { padding: 9px 10px 9px 0; border-bottom: 1px solid rgba(42,50,66,.5); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
+  .empty-note { color: var(--muted); font-size: 13px; }
+  .url.big {
+    font-size: 15px; font-weight: 600; letter-spacing: .2px;
+    padding: 11px 13px; color: #bfe0ff; max-height: none;
+  }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 10px; line-height: 1.7; }
+  .hint strong { color: #c9d4e0; font-weight: 600; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .countdown { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .expired { color: var(--warn); }
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+    background: #232c38; border: 1px solid var(--border);
+    padding: 10px 18px; border-radius: 10px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+    max-width: 90vw; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+    background: var(--accent-dim); color: var(--accent);
+  }
+  .tag.gray { background: rgba(139,152,169,.14); color: var(--muted); }
+  @media (max-width: 640px) {
+    .entry { flex-direction: column; align-items: stretch; }
+    .entry .qr { width: 170px; height: 170px; align-self: center; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>局域网连接</h1>
+  <div class="sub">让手机、平板或另一台电脑连上这个 dsh。</div>
+
+  <div class="card">
+    <h2>状态</h2>
+    <div id="status"><span class="empty-note">读取中…</span></div>
+    <div class="hint" id="statusHint"></div>
+  </div>
+
+  <div class="card">
+    <h2>连接入口</h2>
+    <div id="entries"><span class="empty-note">读取中…</span></div>
+    <div class="hint">
+      二维码里是<strong>短时配对码</strong>（默认 2 分钟），手机扫一下就进，<strong>不用手抄</strong>那一长串令牌。<br>
+      配对码过期后二维码自动作废，点「重新生成」会换一张新码并<strong>立即让上一张失效</strong>。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>门禁开关</h2>
+    <div id="gateSwitch"><span class="empty-note">读取中…</span></div>
+    <div class="hint">
+      关掉之后，手机和其他电脑都进不来，只有本机能用这个 dsh。<br>
+      这个开关<strong>立即生效</strong>，不用重启——它启停的是局域网侧的
+      <strong>门禁口</strong>（默认 <span class="mono">3099</span>），
+      不碰 dsh 本体的监听（本体永远只在 <span class="mono">127.0.0.1</span>）。
+      <br>注意：开关是<strong>运行期</strong>的，重启 dsh 后会按插件配置恢复（默认开启）。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>访问门禁</h2>
+    <div id="gate"><span class="empty-note">读取中…</span></div>
+    <div id="gateWarn"></div>
+    <div class="hint">
+      手机等局域网设备打开的是<strong>门禁端口</strong>，要先登录；登录状态默认保持一周，到期需重新输入。
+      本机（127.0.0.1）不受影响，直连即可。
+    </div>
+    <div id="gateSessions"></div>
+  </div>
+
+  <div class="card">
+    <h2>在线设备 <span id="deviceCount" class="empty-note"></span></h2>
+    <div id="devices"><span class="empty-note">读取中…</span></div>
+    <div class="hint">
+      最近有活动的浏览器会话。标「扫码」的是通过配对码进来的。
+      配置了设备表持久化时，离线设备也会留着（灰显），方便你回看谁来过。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>换锁</h2>
+    <div class="row">
+      <button class="danger" id="rotateBtn">轮换密钥，踢掉所有已配对设备</button>
+      <button id="refreshBtn">刷新</button>
+    </div>
+    <div class="hint">
+      轮换后会同时撤销当前配对码，所有已扫码的设备都需要重新扫。<br>
+      注意：签名密钥在 dsh 进程内存里不可热替换，所以<strong>要重启 dsh 后才真正生效</strong>。
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+  var BASE = '/ext/lan-connect';
+  var state = null;
+  var tickTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+
+  var toastTimer;
+  function toast(text) {
+    var el = $('toast');
+    el.textContent = text;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2600);
+  }
+
+  // 局域网是 http 非安全上下文，navigator.clipboard 通常不可用，必须留退路。
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(
+        function () { toast('已复制'); },
+        function () { fallbackCopy(text); }
+      );
+      return;
+    }
+    fallbackCopy(text);
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    toast(ok ? '已复制' : '复制失败，请手动选中复制');
+  }
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function timeAgo(ms) {
+    var s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    if (s < 60) return s + ' 秒前';
+    if (s < 3600) return Math.round(s / 60) + ' 分钟前';
+    if (s < 86400) return Math.round(s / 3600) + ' 小时前';
+    return Math.round(s / 86400) + ' 天前';
+  }
+
+  function renderStatus(s) {
+    var box = $('status');
+    box.textContent = '';
+
+    // 主状态看**门禁**是否在跑，而不是看本体的 bind：
+    // 现在本体就该只绑回环（127.0.0.1），局域网访问由门禁端口承担。
+    var g = s.gate || {};
+    var badge = el('span', 'badge ' + (g.running ? 'on' : 'gray'));
+    badge.appendChild(el('span', 'dot'));
+    badge.appendChild(document.createTextNode(g.running
+      ? ('局域网可用 · 门禁端口 ' + g.port)
+      : (g.enabled === false ? '门禁未启用' : '门禁未启动')));
+    box.appendChild(badge);
+    box.appendChild(document.createTextNode(' '));
+
+    // 本体是否还开在局域网上（开了的话门禁就能被绕过）
+    var bodyBadge = el('span', 'badge ' + (s.lanEnabled ? 'off' : 'on'));
+    bodyBadge.appendChild(el('span', 'dot'));
+    bodyBadge.appendChild(document.createTextNode(s.lanEnabled ? '⚠ 本体也开在局域网' : '本体仅本机'));
+    box.appendChild(bodyBadge);
+
+    // 配对码状态
+    var pairBadge;
+    if (s.pair && s.pair.active) {
+      pairBadge = el('span', 'badge live');
+      pairBadge.appendChild(el('span', 'dot'));
+      pairBadge.appendChild(document.createTextNode('配对码有效 '));
+      var cd = el('span', 'countdown');
+      cd.id = 'cd';
+      pairBadge.appendChild(cd);
+      box.appendChild(document.createTextNode(' '));
+    } else {
+      pairBadge = el('span', 'badge gray');
+      pairBadge.appendChild(el('span', 'dot'));
+      pairBadge.appendChild(document.createTextNode(g.running ? '配对码已失效' : '未启用'));
+      box.appendChild(document.createTextNode(' '));
+    }
+    box.appendChild(pairBadge);
+
+    if (g.running) {
+      var again = el('button', 'primary', '重新生成配对码');
+      again.style.marginLeft = '10px';
+      again.addEventListener('click', issuePair);
+      box.appendChild(again);
+    }
+
+    var p = el('div', 'hint');
+    p.style.marginTop = '10px';
+    p.textContent = '监听 ' + s.bindHost + ':' + s.port;
+    box.appendChild(p);
+
+    var hint = $('statusHint');
+    if (g.running) {
+      hint.textContent = s.addresses.length > 0
+        ? '这台机器有 ' + s.addresses.length + ' 个可用局域网地址，下面按可用性排序。手机扫码、电脑开网址，都走门禁端口。'
+        : '门禁在跑，但没检测到可用的局域网 IPv4 地址——检查一下 Wi-Fi 是否连着。';
+    } else if (g.enabled === false) {
+      hint.textContent = '访问门禁被关掉了（插件配置 gateEnabled: false），局域网设备接不进来。';
+    } else {
+      hint.textContent = '门禁没能启动' + (g.error ? '：' + g.error : '')
+        + '。常见原因是端口被占用，可在插件配置里改 gatePort。';
+    }
+  }
+
+  /** 每秒更新配对码倒计时；归零就触发一次重载让二维码区域变成"已失效"。 */
+  function startCountdown(expiresAt) {
+    if (tickTimer) clearInterval(tickTimer);
+    function tick() {
+      var cd = $('cd');
+      if (!cd) { clearInterval(tickTimer); tickTimer = null; return; }
+      var left = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+      cd.textContent = left + ' 秒';
+      if (left <= 0) {
+        clearInterval(tickTimer);
+        tickTimer = null;
+        cd.textContent = '已过期';
+        load(false);
+      }
+    }
+    tick();
+    tickTimer = setInterval(tick, 1000);
+  }
+
+  function renderEntries(s) {
+    var box = $('entries');
+    box.textContent = '';
+
+    var items = s.addresses.slice();
+    items.push({
+      iface: '本机',
+      address: '127.0.0.1',
+      loopbackUrl: s.loopbackUrl,
+      recommended: false,
+      loopback: true
+    });
+
+    if (items.length === 0) {
+      box.appendChild(el('span', 'empty-note', '没有可用入口。'));
+      return;
+    }
+
+    items.forEach(function (item, index) {
+      var card = el('div', 'entry');
+
+      // ── 二维码 ──
+      var qrWrap = el('div', 'qr');
+      if (item.loopback) {
+        qrWrap.className = 'qr empty';
+        qrWrap.textContent = '本机地址无需扫码';
+      } else if (!item.pairUrl) {
+        qrWrap.className = 'qr empty';
+        qrWrap.textContent = '配对码已失效\n点上方「重新生成」';
+      } else {
+        var img = document.createElement('img');
+        img.alt = '配对二维码';
+        // 加时间戳避开任何中间缓存，保证刷新后拿到的是新配对码
+        img.src = BASE + '/qr.svg?i=' + String(index) + '&t=' + String(Date.now());
+        img.onerror = function () {
+          qrWrap.className = 'qr empty';
+          qrWrap.textContent = '二维码生成失败';
+        };
+        qrWrap.appendChild(img);
+      }
+      card.appendChild(qrWrap);
+
+      // ── 说明 ──
+      var info = el('div', 'info');
+      var name = el('div', 'name');
+      name.appendChild(document.createTextNode(item.iface + ' · ' + item.address));
+      if (item.recommended) name.appendChild(el('span', 'rec', '推荐'));
+      info.appendChild(name);
+      info.appendChild(el('div', 'meta', item.loopback
+        ? '本机浏览器用，直连不用登录'
+        : '手机扫左边二维码免密进入；其他电脑打开下面网址，输账号密码'));
+
+      var row = el('div', 'row');
+      if (item.loopback) {
+        info.appendChild(el('div', 'url', item.loopbackUrl));
+        var copyLoop = el('button', 'primary', '复制本机链接');
+        copyLoop.addEventListener('click', function () { copyText(item.loopbackUrl); });
+        row.appendChild(copyLoop);
+      } else {
+        // 两种入口，用途不同，都列出来：
+        //   网址   —— 给其他电脑：浏览器打开，输账号密码，7 天免再输
+        //   二维码 —— 给手机：扫一下免密进入（配对码 2 分钟有效、刷新即换）
+        // 网址故意放大：这是要**手抄到另一台电脑**上的东西，小字看不清。
+        var urlBox = el('div', 'url big', item.gateUrl || '（门禁未启动）');
+        info.appendChild(urlBox);
+
+        var copyGate = el('button', 'primary', '复制网址（给电脑）');
+        copyGate.disabled = !item.gateUrl;
+        copyGate.addEventListener('click', function () { copyText(item.gateUrl); });
+        row.appendChild(copyGate);
+
+        var copyPair = el('button', '', '复制扫码链接');
+        copyPair.disabled = !item.pairUrl;
+        copyPair.addEventListener('click', function () { copyText(item.pairUrl); });
+        row.appendChild(copyPair);
+
+        // 二维码存成 PNG：电脑上也能存下来、发给别人，不必拿手机对着屏幕
+        var saveQr = el('button', '', '保存二维码图片');
+        saveQr.disabled = !item.pairUrl;
+        saveQr.title = '存成 PNG，可以发到别的电脑上再扫';
+        saveQr.addEventListener('click', function () {
+          saveQr.disabled = true;
+          downloadQr(index).catch(function () { toast('二维码保存失败'); })
+            .then(function () { saveQr.disabled = false; });
+        });
+        row.appendChild(saveQr);
+
+        var openBtn = el('button', '', '在本机打开');
+        openBtn.addEventListener('click', function () {
+          if (item.gateUrl) window.open(item.gateUrl, '_blank', 'noopener');
+        });
+        openBtn.disabled = !item.gateUrl;
+        row.appendChild(openBtn);
+      }
+      info.appendChild(row);
+      card.appendChild(info);
+      box.appendChild(card);
+    });
+  }
+
+  /** 门禁开关：运行期启停门禁口，立即生效（v0.2.0 取代了旧的「改 host」开关）。 */
+  function renderGateSwitch(s) {
+    var box = $('gateSwitch');
+    box.textContent = '';
+
+    var g = s.gate || {};
+    var running = g.running === true;
+
+    var badge = el('span', 'badge ' + (running ? 'on' : 'gray'));
+    badge.appendChild(el('span', 'dot'));
+    badge.appendChild(document.createTextNode(running ? ('门禁已开 · 端口 ' + g.port) : '门禁已关'));
+    box.appendChild(badge);
+
+    if (g.error) {
+      var errBox = el('div', 'hint');
+      errBox.style.color = '#ffb4ae';
+      errBox.style.marginTop = '10px';
+      errBox.textContent = '上次启动失败：' + g.error + '（可在插件配置里改 gatePort）';
+      box.appendChild(errBox);
+    }
+
+    var row = el('div', 'row');
+    row.style.marginTop = '10px';
+    var btn = el('button', running ? 'danger' : 'primary', running ? '关闭门禁' : '开启门禁');
+    btn.addEventListener('click', function () {
+      var wanted = !running;
+      if (!wanted && !window.confirm('关闭门禁吗？\n手机和其他电脑会立刻连不上。')) return;
+      btn.disabled = true;
+      fetch(BASE + '/api/gate/control', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ enabled: wanted }),
+      })
+        .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+        .then(function (res) {
+          if (!res.ok || !res.body.ok) throw new Error(res.body.error || '操作失败');
+          toast(wanted ? '门禁已开启' : '门禁已关闭');
+          load(false);
+        })
+        .catch(function (err) { toast(err.message); btn.disabled = false; });
+    });
+    row.appendChild(btn);
+    box.appendChild(row);
+  }
+
+  /** 访问门禁：运行状态 + 绕过警告 + 已登录设备。 */
+  function renderGate(s) {
+    var box = $('gate');
+    var warnBox = $('gateWarn');
+    var sessionsBox = $('gateSessions');
+    box.textContent = '';
+    warnBox.textContent = '';
+    sessionsBox.textContent = '';
+
+    var g = s.gate || {};
+    var badge = el('span', 'badge ' + (g.running ? 'on' : 'gray'));
+    badge.appendChild(el('span', 'dot'));
+    badge.appendChild(document.createTextNode(
+      g.running ? ('门禁运行中 · 端口 ' + g.port)
+        : (g.enabled === false ? '门禁未启用' : '门禁未启动')
+    ));
+    box.appendChild(badge);
+
+    if (g.sessions && g.sessions.length > 0) {
+      var n = el('span', 'badge live');
+      n.style.marginLeft = '8px';
+      n.appendChild(el('span', 'dot'));
+      n.appendChild(document.createTextNode(g.sessions.length + ' 台设备已登录'));
+      box.appendChild(n);
+    }
+
+    if (g.error) {
+      var e = el('div', 'hint');
+      e.style.color = '#ffb4ae';
+      e.textContent = '启动失败：' + g.error + '（可在插件配置里改 gatePort）';
+      box.appendChild(e);
+    }
+
+    // ★ 最重要的一条：dsh 本体若仍开在局域网上，门禁形同虚设
+    if (g.dshExposedOnLan) {
+      var warn = el('div');
+      warn.style.cssText = 'margin-top:12px;padding:11px 13px;border-radius:9px;font-size:12.5px;line-height:1.7;'
+        + 'background:rgba(210,153,34,.12);border:1px solid rgba(210,153,34,.35);color:#e8c877';
+      warn.appendChild(el('strong', '', '⚠ 门禁可以被绕过'));
+      warn.appendChild(document.createElement('br'));
+      warn.appendChild(document.createTextNode(
+        'dsh 本体仍监听在 0.0.0.0:' + g.dshPort + '，局域网里任何人都能直接访问它、跳过登录。'
+        + '桌面端应当只绑 127.0.0.1——请检查 webserver 配置（本插件不会替你改它）。'));
+      warnBox.appendChild(warn);
+    } else if (g.running) {
+      var ok = el('div');
+      ok.style.cssText = 'margin-top:12px;padding:9px 12px;border-radius:9px;font-size:12.5px;'
+        + 'background:rgba(63,185,80,.10);border:1px solid rgba(63,185,80,.28);color:#8ee79a';
+      ok.textContent = '✓ dsh 本体只监听本机，门禁是唯一入口。';
+      warnBox.appendChild(ok);
+    }
+
+    // ── 已登录设备 ──
+    if (!g.sessions || g.sessions.length === 0) {
+      if (g.hasAccount === false) {
+        var tip = el('div', 'hint');
+        tip.textContent = '还没有设置访问密码。请在这台电脑上用 127.0.0.1 打开门禁端口完成首次设置。';
+        sessionsBox.appendChild(tip);
+      }
+      return;
+    }
+
+    var head = el('div', 'hint');
+    head.style.marginTop = '14px';
+    head.style.marginBottom = '6px';
+    head.textContent = '已登录设备（撤销是即时生效的）：';
+    sessionsBox.appendChild(head);
+
+    var table = document.createElement('table');
+    var thead = document.createElement('thead');
+    var htr = document.createElement('tr');
+    ['设备', 'IP', '最后活动', '到期', ''].forEach(function (label) {
+      htr.appendChild(el('th', '', label));
+    });
+    thead.appendChild(htr);
+    table.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+    g.sessions.forEach(function (session) {
+      var tr = document.createElement('tr');
+      tr.appendChild(el('td', '', shortUa(session.ua)));
+      tr.appendChild(el('td', 'mono', session.ip));
+      tr.appendChild(el('td', '', timeAgo(session.lastSeen)));
+
+      // 到期列：不足一天就标黄，提醒"这台快掉了"
+      var msLeft = session.expiresAt - Date.now();
+      var tdExp = el('td', '', timeLeft(session.expiresAt));
+      if (msLeft <= 24 * 3600 * 1000) {
+        tdExp.style.color = '#e8c877';
+        tdExp.style.fontWeight = '600';
+        tdExp.title = '不足一天，可以点「续期」再延一周';
+      }
+      tr.appendChild(tdExp);
+
+      var tdBtn = el('td');
+      tdBtn.style.whiteSpace = 'nowrap';
+
+      var renew = el('button', '', '续期');
+      renew.title = '把这台设备的登录再延一周，不用重新输密码';
+      renew.addEventListener('click', function () {
+        renew.disabled = true;
+        fetch(BASE + '/api/gate/renew?token=' + encodeURIComponent(session.token), { method: 'POST' })
+          .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+          .then(function (res) {
+            if (!res.ok || !res.body.ok) throw new Error(res.body.error || '续期失败');
+            toast('已续期一周');
+            load(false);
+          })
+          .catch(function (err) { toast(err.message); renew.disabled = false; });
+      });
+      tdBtn.appendChild(renew);
+
+      var btn = el('button', '', '撤销');
+      btn.style.marginLeft = '6px';
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        fetch(BASE + '/api/gate/revoke?token=' + encodeURIComponent(session.token), { method: 'POST' })
+          .then(function () { toast('已撤销该设备'); load(false); })
+          .catch(function () { toast('撤销失败'); btn.disabled = false; });
+      });
+      tdBtn.appendChild(btn);
+
+      tr.appendChild(tdBtn);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    sessionsBox.appendChild(table);
+
+    var all = el('button', 'danger', '撤销全部登录');
+    all.style.marginTop = '10px';
+    all.addEventListener('click', function () {
+      if (!window.confirm('确定撤销所有已登录设备吗？\n它们下次访问需要重新输入账号密码。')) return;
+      all.disabled = true;
+      fetch(BASE + '/api/gate/revoke', { method: 'POST' })
+        .then(function () { toast('已撤销全部登录'); load(false); })
+        .catch(function () { toast('撤销失败'); all.disabled = false; });
+    });
+    sessionsBox.appendChild(all);
+  }
+
+  /** UA 摘要，够认出来是哪台设备就行。 */
+  function shortUa(ua) {
+    if (!ua) return '未知客户端';
+    var parts = [];
+    if (/iPhone/i.test(ua)) parts.push('iPhone');
+    else if (/iPad/i.test(ua)) parts.push('iPad');
+    else if (/Android/i.test(ua)) parts.push('Android');
+    else if (/Windows/i.test(ua)) parts.push('Windows');
+    else if (/Macintosh|Mac OS X/i.test(ua)) parts.push('macOS');
+    else if (/Linux/i.test(ua)) parts.push('Linux');
+    var browser = [[/Edg\//i, 'Edge'], [/Chrome\//i, 'Chrome'], [/Firefox\//i, 'Firefox'], [/Safari\//i, 'Safari']]
+      .find(function (pair) { return pair[0].test(ua); });
+    if (browser) parts.push(browser[1]);
+    return parts.length > 0 ? parts.join(' · ') : '未知客户端';
+  }
+
+  /** 把二维码 SVG 转成 PNG 存下来（电脑上也能存、能转发给别人扫）。 */
+  function downloadQr(index) {
+    return fetch(BASE + '/qr.svg?i=' + String(index) + '&t=' + String(Date.now()))
+      .then(function (r) { return r.text(); })
+      .then(function (svg) {
+        return new Promise(function (resolve, reject) {
+          var blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+          var url = URL.createObjectURL(blob);
+          var img = new Image();
+          img.onload = function () {
+            try {
+              var size = 520;
+              var canvas = document.createElement('canvas');
+              canvas.width = size;
+              canvas.height = size;
+              var ctx = canvas.getContext('2d');
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, size, size);
+              ctx.drawImage(img, 0, 0, size, size);
+              URL.revokeObjectURL(url);
+              canvas.toBlob(function (png) {
+                if (!png) { reject(new Error('转 PNG 失败')); return; }
+                var a = document.createElement('a');
+                var href = URL.createObjectURL(png);
+                a.href = href;
+                a.download = 'dsh-连接二维码.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function () { URL.revokeObjectURL(href); }, 5000);
+                toast('二维码已保存');
+                resolve();
+              }, 'image/png');
+            } catch (e) {
+              URL.revokeObjectURL(url);
+              reject(e);
+            }
+          };
+          img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('SVG 加载失败')); };
+          img.src = url;
+        });
+      });
+  }
+
+  /** 距离过期还有多久。 */
+  function timeLeft(expiresAt) {
+    var ms = expiresAt - Date.now();
+    if (ms <= 0) return '已过期';
+    var d = Math.floor(ms / 86400000);
+    var h = Math.floor((ms % 86400000) / 3600000);
+    if (d > 0) return d + ' 天' + (h > 0 ? ' ' + h + ' 小时' : '');
+    var m = Math.max(1, Math.round(ms / 60000));
+    return m + ' 分钟';
+  }
+
+  function renderDevices(s) {
+    var box = $('devices');
+    box.textContent = '';
+    var online = s.devices.filter(function (d) { return d.online; }).length;
+    $('deviceCount').textContent = s.devices.length > 0
+      ? '（' + online + ' 在线 / 共 ' + s.devices.length + '）'
+      : '';
+
+    if (s.devices.length === 0) {
+      box.appendChild(el('span', 'empty-note', '暂时没有活动会话。'));
+      return;
+    }
+
+    var table = document.createElement('table');
+    var thead = document.createElement('thead');
+    var htr = document.createElement('tr');
+    ['设备', 'IP', '最后活动', '次数'].forEach(function (label) {
+      htr.appendChild(el('th', '', label));
+    });
+    thead.appendChild(htr);
+    table.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+    s.devices.forEach(function (device) {
+      var tr = document.createElement('tr');
+      if (!device.online) tr.style.opacity = '.5';
+
+      var tdLabel = el('td', '', device.label);
+      if (device.viaPair) tdLabel.appendChild(el('span', 'tag', '扫码'));
+      if (device.ip === s.currentIp) tdLabel.appendChild(el('span', 'tag gray', '当前'));
+      tr.appendChild(tdLabel);
+      tr.appendChild(el('td', 'mono', device.ip));
+      tr.appendChild(el('td', '', timeAgo(device.lastSeen)));
+      tr.appendChild(el('td', 'mono', String(device.hits)));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    box.appendChild(table);
+  }
+
+  // allowIssue：只有"页面刚打开"才允许服务端自动签发配对码。
+  // 后台轮询必须传 false，否则配对码会被无限续期，TTL 就白设了。
+  function load(allowIssue) {
+    var url = BASE + '/api/state' + (allowIssue ? '?issue=1' : '');
+    return fetch(url, { headers: { 'accept': 'application/json' } })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (s) {
+        state = s;
+        renderStatus(s);
+        renderEntries(s);
+        renderGateSwitch(s);
+        renderGate(s);
+        renderDevices(s);
+        if (s.pair && s.pair.active) startCountdown(s.pair.expiresAt);
+      })
+      .catch(function (err) {
+        $('status').textContent = '';
+        $('status').appendChild(el('span', 'empty-note', '读取失败：' + err.message));
+      });
+  }
+
+  function issuePair() {
+    return fetch(BASE + '/api/pair/issue', { method: 'POST' })
+      .then(function (res) { return res.json(); })
+      .then(function () {
+        toast('已生成新的配对码，上一张立即失效');
+        return load(false);
+      })
+      .catch(function (err) { toast('生成失败：' + err.message); });
+  }
+
+  $('refreshBtn').addEventListener('click', function () { load(false); toast('已刷新'); });
+
+  $('rotateBtn').addEventListener('click', function () {
+    if (!window.confirm('确定要轮换密钥吗？\n\n所有已经扫码的设备都会失效，需要重新扫码。\n（重启 dsh 后真正生效）')) return;
+    var btn = this;
+    btn.disabled = true;
+    fetch(BASE + '/api/rotate', { method: 'POST' })
+      .then(function (res) { return res.json().then(function (b) { return { ok: res.ok, body: b }; }); })
+      .then(function (result) {
+        if (!result.ok || !result.body.ok) throw new Error(result.body.error || '轮换失败');
+        toast(result.body.message || '密钥已轮换');
+        load(false);
+      })
+      .catch(function (err) { toast('失败：' + err.message); })
+      .then(function () { btn.disabled = false; });
+  });
+
+  load(true); // 首次打开：允许自动发一张配对码
+  // 轮询只刷设备列表，绝不碰配对码（不能让它偷偷续期）
+  setInterval(function () { load(false); }, 20000);
+})();
+</script>
+</body>
+</html>

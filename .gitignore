@@ -1,0 +1,28 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+build/
+*.tgz
+*.zip
+
+# 本地备份 / 草稿
+*.bak
+*.bak-*
+_bak*
+scratch/
+
+# 环境与凭据（绝不上传）
+.env
+.env.*
+*.pem
+*.key
+paired.json
+identity.json
+secrets.json
+
+# 系统
+.DS_Store
+Thumbs.db
+*.log
